@@ -1,30 +1,8 @@
 #!/bin/bash
 # 用户界面工具
 
-# 显示菜单标题和系统信息
-show_menu_header() {
-    clear
 
-    # 显示标题边框
-    echo -e "${COLOR_CYAN}+$(printf '=%.0s' $(seq 1 80))+${COLOR_RESET}"
-
-    # 显示系统信息
-    echo -e "${COLOR_YELLOW}系统信息: ${COLOR_RESET}$(uname -s) $(uname -r)"
-    echo -e "${COLOR_YELLOW}主机名: ${COLOR_RESET}$(hostname)"
-    echo -e "${COLOR_YELLOW}当前用户: ${COLOR_RESET}$(whoami)"
-    echo -e "${COLOR_YELLOW}系统时间: ${COLOR_RESET}$(date '+%Y-%m-%d %H:%M:%S')"
-
-    # 显示标题边框
-    echo -e "${COLOR_CYAN}+$(printf '=%.0s' $(seq 1 80))+${COLOR_RESET}"
-
-    # 显示操作提示
-    echo -e "\n${COLOR_GREEN}操作说明:${COLOR_RESET}"
-    echo -e "  ${COLOR_YELLOW}[a-e]${COLOR_RESET} - 切换标签"
-    echo -e "  ${COLOR_YELLOW}[0-9]${COLOR_RESET} - 执行操作"
-    echo -e "  ${COLOR_YELLOW}[q]${COLOR_RESET}   - 退出程序\n"
-}
-
-#  existing code 
+#  existing code
 # 处理安装选择
 process_install_choice() {
     local service_name=$1
@@ -129,49 +107,6 @@ process_status_choice() {
     return 0
 }
 
-# 显示菜单
-show_menu() {
-    echo -e "\n${COLOR_CYAN}=== 可用操作 ===${COLOR_RESET}"
-    echo -e "${COLOR_CYAN}+$(printf '=%.0s' $(seq 1 80))+${COLOR_RESET}"
-    
-    # 横排显示主菜单选项
-    printf "%-20s" "  ${COLOR_GREEN}1. 安装服务${COLOR_RESET}"
-    printf "%-20s" "  ${COLOR_GREEN}2. 卸载服务${COLOR_RESET}"
-    printf "%-20s" "  ${COLOR_GREEN}3. 系统管理${COLOR_RESET}"
-    printf "%-20s\n" "  ${COLOR_GREEN}4. 配置管理${COLOR_RESET}"
-    
-    printf "%-20s" "  ${COLOR_GREEN}5. 查看状态${COLOR_RESET}"
-    printf "%-20s\n" "  ${COLOR_YELLOW}0. 退出程序${COLOR_RESET}"
-    
-    echo -e "${COLOR_CYAN}+$(printf '=%.0s' $(seq 1 80))+${COLOR_RESET}\n"
-
-    [ -z "$1" ] && return
-
-    case "$1" in
-    "install")
-        show_install_menu_by_template
-        ;;
-    "uninstall") 
-        show_uninstall_menu_by_template
-        ;;
-    "system")
-        show_submenu "系统管理" "系统优化" "清理系统" "更新系统" "返回主菜单"
-        ;;
-    "config")
-        show_submenu "配置管理" "查看配置" "修改配置" "备份配置" "恢复配置" "返回主菜单"
-        ;;
-    "status")
-        show_submenu "状态查看" "系统状态" "服务状态" "资源使用" "查看日志" "返回主菜单"
-        ;;
-    0)
-        return
-        ;;
-    *)
-        log "WARN" "无效的选择: $1"
-        ;;
-    esac
-}
-
 # 获取用户输入
 get_user_input() {
     local prompt=$1
@@ -243,30 +178,6 @@ get_user_input() {
     return 1
 }
 
-# 显示进度条
-show_progress() {
-    local current=$1
-    local total=$2
-    local width=${3:-50}
-    local title=${4:-"进度"}
-
-    # 计算百分比
-    local percentage=$((current * 100 / total))
-    local filled=$((percentage * width / 100))
-    local empty=$((width - filled))
-
-    # 构建进度条
-    printf "\r%s: [" "$title"
-    printf "%${filled}s" "" | tr ' ' '#'
-    printf "%${empty}s" "" | tr ' ' '-'
-    printf "] %3d%%" "$percentage"
-
-    # 完成时换行
-    if [ "$current" -eq "$total" ]; then
-        echo
-    fi
-}
-
 # 显示确认对话框
 confirm_action() {
     local message=$1
@@ -278,7 +189,6 @@ confirm_action() {
         if [ "$timeout" -gt 0 ]; then
             read -r -p "$message [y/n] ($default) ${timeout}s: " -t "$timeout" response
             if [ $? -ge 128 ]; then
-                echo
                 response="$default"
             fi
         else
@@ -294,31 +204,6 @@ confirm_action() {
     done
 }
 
-# 显示选择列表
-show_select_list() {
-    local title=$1
-    shift
-    local options=("$@")
-    local selected
-
-    echo -e "\n$title:"
-    echo "----------------------------------------"
-    for i in "${!options[@]}"; do
-        echo "$((i + 1)). ${options[$i]}"
-    done
-    echo "----------------------------------------"
-
-    while true; do
-        read -r -p "请选择 [1-${#options[@]}]: " selected
-        if [[ "$selected" =~ ^[0-9]+$ ]] &&
-            [ "$selected" -ge 1 ] &&
-            [ "$selected" -le "${#options[@]}" ]; then
-            return "$((selected - 1))"
-        else
-            echo "无效的选择，请重试"
-        fi
-    done
-}
 
 # 输入服务名称不带文件后缀
 get_service_by_name() {
@@ -340,45 +225,4 @@ get_service_by_name() {
     else
         return 1
     fi
-}
-
-# 显示子菜单
-show_submenu() {
-    local title=$1
-    shift
-    local options=("$@")
-
-    echo -e "\n${COLOR_CYAN}=== $title ===${COLOR_RESET}"
-    echo -e "${COLOR_CYAN}+$(printf '=%.0s' $(seq 1 80))+${COLOR_RESET}\n"
-
-    local count=1
-    local items_per_row=4
-
-    for option in "${options[@]}"; do
-        if [[ "$option" == *"返回"* ]]; then
-            printf "\n  ${COLOR_YELLOW}0. %-20s${COLOR_RESET}" "$option"
-        else
-            printf "  ${COLOR_GREEN}%d. %-20s${COLOR_RESET}" "$count" "$option"
-            if [ $((count % items_per_row)) -eq 0 ]; then
-                echo -e "\n"
-            fi
-            ((count++))
-        fi
-    done
-    echo -e "\n"
-}
-show_main_menu() {
-    echo -e "\n${COLOR_CYAN}=== 主菜单 ===${COLOR_RESET}"
-    echo -e "${COLOR_CYAN}+$(printf '=%.0s' $(seq 1 80))+${COLOR_RESET}\n"
-    
-    # 横排显示标签选项
-    printf "  ${COLOR_GREEN}[a] %-15s${COLOR_RESET}" "安装服务"
-    printf "  ${COLOR_GREEN}[b] %-15s${COLOR_RESET}" "卸载服务" 
-    printf "  ${COLOR_GREEN}[c] %-15s${COLOR_RESET}" "系统管理"
-    printf "  ${COLOR_GREEN}[d] %-15s${COLOR_RESET}\n" "配置管理"
-    
-    printf "  ${COLOR_GREEN}[e] %-15s${COLOR_RESET}" "状态查看"
-    printf "  ${COLOR_YELLOW}[q] %-15s${COLOR_RESET}\n" "退出程序"
-    
-    echo -e "${COLOR_CYAN}+$(printf '=%.0s' $(seq 1 80))+${COLOR_RESET}\n"
 }

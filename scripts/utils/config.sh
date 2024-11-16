@@ -3,9 +3,6 @@
 
 # 默认配置
 declare -A DEFAULT_CONFIG=(
-    ["JAVA_VERSION"]="$DEFAULT_JAVA_VERSION"
-    ["NGINX_VERSION"]="$DEFAULT_NGINX_VERSION"
-    ["REDIS_VERSION"]="$DEFAULT_REDIS_VERSION"
     ["INSTALL_MODE"]="network"
     ["AUTO_BACKUP"]="true"
     ["DEBUG_MODE"]="false"
