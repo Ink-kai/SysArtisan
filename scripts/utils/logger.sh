@@ -1,23 +1,12 @@
 #!/bin/bash
 # 日志工具
 
-# 定义日志级别
-declare -r LOG_LEVEL_DEBUG=0
-declare -r LOG_LEVEL_INFO=1
-declare -r LOG_LEVEL_WARN=2
-declare -r LOG_LEVEL_ERROR=3
-
 # UI日志数组
 declare -a RECENT_LOGS=()
 readonly MAX_LOGS=5
 
-# 日志文件
-LOG_FILE="${LOG_PATH}/deploy.log"
-LOG_MAX_SIZE=$((10 * 1024 * 1024)) # 10MB
-LOG_BACKUP_COUNT=5
-
 # 当前日志级别（默认为 INFO）
-CURRENT_LOG_LEVEL=${LOG_LEVEL:-$LOG_LEVEL_INFO}
+CURRENT_LOG_LEVEL=${LOG_LEVEL:-$LOG_LEVEL_DEBUG}
 
 # UI日志函数
 add_ui_log() {
@@ -139,11 +128,11 @@ log() {
 
         # 根据日志级别使用不同颜色
         case "$level" in
-        "DEBUG") echo -e "${COLOR_DEBUG}${log_message}${COLOR_RESET}" ;;
-        "INFO") echo -e "${COLOR_INFO}${log_message}${COLOR_RESET}" ;;
-        "WARN") echo -e "${COLOR_WARNING}${log_message}${COLOR_RESET}" ;;
-        "ERROR") echo -e "${COLOR_ERROR}${log_message}${COLOR_RESET}" ;;
-        *) echo -e "${log_message}" ;;
+        "DEBUG") echo -e "${COLOR_DEBUG}${log_message}${COLOR_RESET}" 3>&1 ;;
+        "INFO") echo -e "${COLOR_INFO}${log_message}${COLOR_RESET}" 3>&1 ;;
+        "WARN") echo -e "${COLOR_WARNING}${log_message}${COLOR_RESET}" 3>&1 ;;
+        "ERROR") echo -e "${COLOR_ERROR}${log_message}${COLOR_RESET}" 3>&1 ;;
+        *) echo -e "${log_message}" 3>&1 ;;
         esac
     fi
 }

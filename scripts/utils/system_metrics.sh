@@ -38,7 +38,6 @@ check_system_resources() {
     cpu_cores=$(nproc)
     if [ "$cpu_cores" -lt 2 ]; then
         log "ERROR" "CPU核心数不足: 当前${cpu_cores}核，建议至少2核"
-        return 1
     fi
 
     # 检查内存大小（以MB为单位）
@@ -46,7 +45,6 @@ check_system_resources() {
     mem_total=$(free -m | awk '/^Mem:/{print $2}')
     if [ "$mem_total" -lt 2048 ]; then
         log "ERROR" "内存不足: 当前${mem_total}MB，建议至少2048MB"
-        return 1
     fi
 
     # 检查磁盘空间（根分区，以GB为单位）
@@ -54,7 +52,6 @@ check_system_resources() {
     disk_free=$(df -BG / | awk 'NR==2 {print $4}' | sed 's/G//')
     if [ "$disk_free" -lt 10 ]; then
         log "ERROR" "磁盘空间不足: 当前剩余${disk_free}GB，建议至少10GB"
-        return 1
     fi
 
     # 检查系统负载 - 修改不使用 bc 命令
@@ -71,6 +68,4 @@ check_system_resources() {
         log "WARN" "建议增加系统文件描述符限制: 当前${file_limit}，建议至少65535"
     fi
 
-    log "INFO" "系统资源检查通过"
-    return 0
 }

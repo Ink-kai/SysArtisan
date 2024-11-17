@@ -27,8 +27,8 @@
 1. 下载脚本:
 
 ```bash
-wget https://raw.githubusercontent.com/yourusername/yourrepo/main/yourscript.sh
-cd linux-deploy-tool
+git clone https://github.com/Ink-kai/SysArtisan.git
+cd SysArtisan
 
 ```
 
@@ -41,7 +41,7 @@ chmod +x deploy.sh
 3. 运行脚本:
 
 ```bash
-./main.sh
+./deploy.sh
 ```
 
 ## 使用说明

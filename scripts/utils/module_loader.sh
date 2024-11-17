@@ -13,7 +13,7 @@ load_system_modules() {
 
     # 检查模块目录是否存在
     if [ ! -d "$module_dir" ]; then
-        log "ERROR" "模块目录不存在: $module_dir"
+        printf "${COLOR_ERROR}ERROR: 模块目录不存在: %s${COLOR_RESET}\n" "$module_dir"
         has_errors=1
         [ "$allow_errors" -eq 0 ] && return 1
         return 0  # 如果允许错误，则继续执行
@@ -26,7 +26,7 @@ load_system_modules() {
 
     # 检查是否找到模块
     if [ ${#modules[@]} -eq 0 ]; then
-        log "WARN" "未找到任何模块: $module_dir"
+        printf "${COLOR_WARNING}WARN: 未找到任何模块: %s${COLOR_RESET}\n" "$module_dir"
         has_errors=1
         [ "$allow_errors" -eq 0 ] && return 1
     fi
@@ -38,15 +38,13 @@ load_system_modules() {
         
         # 检查模块是否已加载
         if [[ -n "${LOADED_MODULES[$module]}" ]]; then
-            log "DEBUG" "模块已加载，跳过: $module_name"
+            printf "${COLOR_DEBUG}DEBUG: 模块已加载，跳过: %s${COLOR_RESET}\n" "$module_name"
             continue
         fi
         
-        log "DEBUG" "正在加载模块: $module_name"
-        
         # 验证模块
         if ! verify_module "$module"; then
-            log "ERROR" "模块验证失败: $module_name"
+            printf "${COLOR_ERROR}ERROR: 模块验证失败: %s${COLOR_RESET}\n" "$module_name"
             has_errors=1
             if [ "$allow_errors" -eq 0 ]; then
                 return 1
@@ -57,10 +55,10 @@ load_system_modules() {
         
         # 尝试加载模块
         if source "$module" 2>/dev/null; then
-            log "DEBUG" "成功加载模块: $module_name"
+            printf "${COLOR_DEBUG}DEBUG: 成功加载模块: %s${COLOR_RESET}\n" "$module_name"
             LOADED_MODULES[$module]=1
         else
-            log "ERROR" "无法加载模块: $module_name"
+            printf "${COLOR_ERROR}ERROR: 无法加载模块: %s${COLOR_RESET}\n" "$module_name"
             has_errors=1
             if [ "$allow_errors" -eq 0 ]; then
                 return 1
@@ -83,7 +81,7 @@ is_module_loaded() {
 # 获取已加载模块列表
 get_loaded_modules() {
     for module in "${!LOADED_MODULES[@]}"; do
-        echo "$(basename "$module")"
+        printf "${COLOR_DEBUG}DEBUG: 已加载模块: %s${COLOR_RESET}\n" "$(basename "$module")"
     done
 }
 

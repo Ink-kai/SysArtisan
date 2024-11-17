@@ -8,29 +8,18 @@ check_network() {
         "www.aliyun.com"
         "www.qq.com"
     )
-    local success=false
-    local failed_hosts=()
 
-    log "INFO" "检查网络连接"
+    log "DEBUG" "检查网络连接"
 
     for host in "${test_hosts[@]}"; do
         if timeout "$NETWORK_TIMEOUT" ping -c 1 -W 3 "$host" >/dev/null 2>&1; then
-            success=true
-            log "DEBUG" "成功连接到 $host"
+            NETWORK_STATUS="online"
             break
         else
             failed_hosts+=("$host")
-            log "DEBUG" "无法连接到 $host"
+
         fi
     done
-
-    if [ "$success" = true ]; then
-        log "INFO" "网络连接正常"
-        return 0
-    else
-        log "ERROR" "网络连接异常，所有测试主机均无法访问: ${failed_hosts[*]}"
-        return 0
-    fi
 }
 
 # 下载文件

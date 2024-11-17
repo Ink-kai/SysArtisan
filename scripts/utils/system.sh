@@ -29,7 +29,7 @@ cleanup_system() {
 
 # 清理临时文件
 clean_temp_file() {
-    rm -rf "$TEMP_PATH"/*
+    rm -rf "${TEMP_PATH:?}"/*
 
     # 清理日志
     find /var/log -type f -name "*.log" -exec truncate -s 0 {} \;
@@ -73,7 +73,6 @@ check_root() {
     return 0
 }
 
-
 # 执行命令
 execute_command() {
     local command=$1
@@ -102,58 +101,66 @@ execute_command() {
     fi
 }
 
-# 获取CPU信息
+# 获取所有网卡IP地址
+get_ip() {
+    # 获取所有网卡IP地址,排除回环地址
+    local ip_list
+    ip_list=$(ip addr show |
+        grep "inet " |
+        grep -v "127.0.0.1" |
+        awk '{print $2}' |
+        cut -d/ -f1)
+
+    # 格式化输出IP地址列表
+    printf "${COLOR_YELLOW}IP地址: ${COLOR_RESET}%s\n" "$ip_list"
+}
+
+# 获取CPU架构
+get_cpu_arch() {
+    printf "${COLOR_YELLOW}CPU架构: ${COLOR_RESET}%s\n" "$(uname -m)"
+}
+
+# 获取CPU型号
+get_cpu_model() {
+    # 字符串前后有空格,使用awk去除
+    printf "${COLOR_YELLOW}CPU型号: ${COLOR_RESET}%s\n" "$(lscpu | grep "Model name" | awk -F: '{print $2}' | sed 's/^[ \t]*//;s/[ \t]*$//')"
+}
+
+# 获取CPU核心数/型号/使用率/逻辑CPU数/物理CPU数
 get_cpu_info() {
-    local cpu_cores
-    cpu_cores=$(nproc)
-    echo "CPU核心数: $cpu_cores"
+    local cpu_cores=$(nproc)
+    # 使用awk去除空格
+    local cpu_usage_rate=$(top -bn1 | grep "Cpu(s)" | awk '{print $2 + $4"%"}' | awk '{print $1}')
+    local cpu_logical_cores=$(lscpu | grep "CPU(s):" | awk -F: '{print $2}' | awk '{print $1}')
+    local cpu_physical_cores=$(lscpu | grep "Core(s) per socket:" | awk -F: '{print $2}' | awk '{print $1}')
+    #
+    printf "${COLOR_YELLOW}%-15s%-10s%-15s%-10s%-15s%-10s${COLOR_RESET}\n" "CPU核心数:" "$cpu_cores" "CPU使用率:" "$cpu_usage_rate" "逻辑CPU数:" "$cpu_logical_cores" "物理CPU数:" "$cpu_physical_cores"
 }
 
 # 获取内存信息
 get_memory_info() {
-    local total_memory
+    # 获取内存信息
+    local total_memory used_memory free_memory usage_rate
     total_memory=$(free -h | awk '/^Mem:/{print $2}')
-    echo "总内存: $total_memory"
+    used_memory=$(free -h | awk '/^Mem:/{print $3}')
+    free_memory=$(free -h | awk '/^Mem:/{print $4}')
+    usage_rate=$(free | awk '/^Mem:/{printf "%.2f", $3/$2*100}')
+
+    # 获取交换分区信息
+    local swap_total swap_used swap_free swap_usage_rate
+    swap_total=$(free -h | awk '/^Swap:/{print $2}')
+    swap_used=$(free -h | awk '/^Swap:/{print $3}')
+    swap_free=$(free -h | awk '/^Swap:/{print $4}')
+    swap_usage_rate=$(free | awk '/^Swap:/{if($2>0) printf "%.2f", $3/$2*100; else print "0"}')
+
+    # 输出信息
+    printf "${COLOR_YELLOW}%-15s%-10s%-15s%-10s%-15s%-10s%-15s%-10s${COLOR_RESET}\n" "内存总量:" "$total_memory" "已用内存:" "$used_memory" "可用内存:" "$free_memory" "内存使用率:" "${usage_rate}%"
+    printf "${COLOR_YELLOW}%-15s%-10s%-15s%-10s%-15s%-10s%-15s%-10s${COLOR_RESET}\n" "交换分区:" "$swap_total" "已用交换:" "$swap_used" "可用交换:" "$swap_free" "交换使用率:" "${swap_usage_rate}%"
 }
 
 # 获取磁盘信息
 get_disk_info() {
-    df -h /
-}
-
-# 显示系统状态
-get_system_status() {
-    echo -e "\n系统状态信息:"
-    echo "----------------------------------------"
-
-    # 显示系统基本信息
-    echo "操作系统: $SYSTEM_OS"
-    echo "系统版本: $(get_os_version)"
-    echo "内核版本: $(uname -r)"
-    echo "主机名: $(hostname)"
-    echo "运行时间: $(uptime -p)"
-
-    # 显示CPU信息
-    echo -e "\nCPU信息:"
-    get_cpu_info
-
-    # 显示内存信息
-    echo -e "\n内存信息:"
-    get_memory_info
-
-    # 显示磁盘信息
-    echo -e "\n磁盘信息:"
-    get_disk_info
-
-    # 显示网络信息
-    echo -e "\n网络信息:"
-    echo "IP地址: $(get_local_ip)"
-
-    # 显示系统负载
-    echo -e "\n系统负载:"
-    uptime
-
-    echo "----------------------------------------"
+    df -h
 }
 
 # 系统优化
@@ -201,10 +208,6 @@ check_environment() {
     }
     get_os
 
-    if [ "$SYSTEM_OS" = "unknown" ]; then
-        log "ERROR" "不支持的操作系统"
-        return 1
-    fi
     log "INFO" "检测到操作系统类型: $SYSTEM_OS"
 
     # 检查必要命令
@@ -217,18 +220,7 @@ check_environment() {
     done
 
     # 检查网络连接
-    check_network || {
-        log "ERROR" "网络连接检查失败"
-        return 1
-    }
-
-    # 检查系统资源
-    check_system_resources || {
-        log "ERROR" "系统资源不足"
-        return 1
-    }
-
-    return 0
+    check_network &
 }
 
 # 显示资源使用情况
@@ -394,8 +386,7 @@ init_environment() {
     }
 
     # 创建必要的目录
-    TEMP_DIR=$(mktemp -d)
-    mkdir -p "${TEMP_DIR}" || {
+    TEMP_DIR=$(mktemp -d) || {
         log "ERROR" "无法创建临时目录: ${TEMP_DIR}"
         return 1
     }

@@ -4,22 +4,18 @@ set -e
 # 定义脚本目录
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# 基础颜色
-COLOR_RESET="\033[0m"
-COLOR_BLACK="\033[30m"
-COLOR_RED="\033[31m"
-COLOR_GREEN="\033[32m"
-COLOR_YELLOW="\033[33m"
-COLOR_BLUE="\033[34m"
-COLOR_PURPLE="\033[35m"
-COLOR_CYAN="\033[36m"
-COLOR_WHITE="\033[37m"
+# 创建新的文件描述符，用于日志输出
+if [ -t 1 ]; then  # 检查标准输出是否连接到终端
+    exec 3>&1
+else
+    exec 3>/dev/null  # 如果不是终端，重定向到/dev/null
+fi
 
 # 错误处理
 trap 'handle_error $? $LINENO $BASH_LINENO "$BASH_COMMAND" $(printf "::%s" ${FUNCNAME[@]:-})' ERR
 
-# 异常退出处理
-# trap 'handle_exit $?' EXIT
+# 退出处理
+trap 'handle_exit $?' EXIT
 
 handle_error() {
     local exit_code=$1
@@ -39,29 +35,39 @@ handle_exit() {
     # 清理临时文件
     [ -d "$TEMP_DIR" ] && rm -rf "$TEMP_DIR"
 
-    if [ "$exit_code" -ne 0 ]; then
-        log "ERROR" "程序异常退出，退出码: $exit_code"
+    # 关闭文件描述符3（如果已打开）
+    if [ -e /dev/fd/3 ]; then
+        exec 3>&-
     fi
+
+    return "$exit_code"
 }
 
-# 加载日志模块
-source "${SCRIPT_DIR}/utils/logger.sh" || {
-    echo "ERROR: 无法加载日志模块"
+
+# 加载模块加载器
+source "${SCRIPT_DIR}/scripts/utils/module_loader.sh" || {
+    echo "ERROR: 无法加载模块加载器"
     exit 1
 }
 
-# 加载模块加载器
-source "${SCRIPT_DIR}/utils/module_loader.sh" || {
-    echo "ERROR: 无法加载模块加载器"
+# 加载配置模块
+load_system_modules "${SCRIPT_DIR}/config" || {
+    echo "ERROR: 无法加载配置模块"
+    exit 1
+}
+
+# 加载日志模块
+source "${SCRIPT_DIR}/scripts/utils/logger.sh" || {
+    echo "ERROR: 无法加载日志模块"
     exit 1
 }
 
 # 定义模块目录（数组）
 MODULES_DIR=(
-    "${SCRIPT_DIR}/config"
-    "${SCRIPT_DIR}/utils"
-    "${SCRIPT_DIR}/ui"
-    "${SCRIPT_DIR}/core"
+    "${SCRIPT_DIR}/scripts/utils"
+    "${SCRIPT_DIR}/scripts/ui"
+    "${SCRIPT_DIR}/scripts/core"
+    "${SCRIPT_DIR}/scripts/services"
 )
 
 # 动态加载所有系统模块
@@ -86,9 +92,6 @@ main() {
         exit 1
     }
 
-    # services具体服务方法（出错继续）
-    load_system_modules "${SCRIPT_DIR}/services" 1  
-
     # 显示Tab式菜单
     main_menu_loop
 
@@ -100,4 +103,4 @@ main() {
 }
 
 # 执行主函数
-main "$@"
+main

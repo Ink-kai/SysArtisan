@@ -1,0 +1,10 @@
+*.log
+*.gz
+*.tar
+*.zip
+*.tar.gz
+*.tar.xz
+*.txt
+*.yml
+*.yaml
+*.json
