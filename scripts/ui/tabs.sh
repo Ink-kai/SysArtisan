@@ -31,20 +31,24 @@ draw_tabs() {
     done
 
     echo -e "${COLOR_CYAN}|${COLOR_RESET}"
-    echo -e "${COLOR_CYAN}+$(printf '=%.0s' $(seq 1 "$SCREEN_WIDTH"))+${COLOR_RESET}\n"
+    show_border
 }
 
 # 主菜单循环
 main_menu_loop() {
     while true; do
-        # show_system_info
-
-        # 如果不是主菜单状态,显示标签页
+        clear_screen
+        log "DEBUG" "当前标签: ${TAB_STATE["current_tab"]}"
+        # 显示系统信息
+        show_system_info
+        draw_tabs "${TAB_STATE["current_tab"]}"
+        # 显示标签页
         if [ "${TAB_STATE["current_tab"]}" != "main" ]; then
-            draw_tabs "${TAB_STATE["current_tab"]}"
+            handle_tab_content
+        else
+            show_operation_prompt
         fi
-
-        # 等待用户输入
+        # 处理用户输入,只更新必要的部分
         handle_user_input
     done
 }

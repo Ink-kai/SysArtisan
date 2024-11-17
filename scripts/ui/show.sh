@@ -1,15 +1,16 @@
 #!/bin/bash
-# 显示菜单标题和系统信息
+
+# 显示系统信息
 show_system_info() {
 
     # 显示标题边框
     show_border
 
-    get_cpu_arch
     get_cpu_model
+    printf "${COLOR_YELLOW}内核版本: ${COLOR_RESET}%s\n" "$(uname -r)"
+    get_cpu_arch
     printf "${COLOR_YELLOW}操作系统: ${COLOR_RESET}%s\n" "$SYSTEM_OS"
     printf "${COLOR_YELLOW}系统版本: ${COLOR_RESET}%s\n" "$(get_os_version)"
-    printf "${COLOR_YELLOW}内核版本: ${COLOR_RESET}%s\n" "$(uname -r)"
     printf "${COLOR_YELLOW}主机名: ${COLOR_RESET}%s\n" "$(hostname)"
     printf "${COLOR_YELLOW}当前用户: ${COLOR_RESET}%s\n" "$(whoami)"
     printf "${COLOR_YELLOW}系统时间: ${COLOR_RESET}%s\n" "$(date '+%Y-%m-%d %H:%M:%S')"
@@ -44,15 +45,25 @@ show_operation_prompt() {
     echo -e "${COLOR_YELLOW}请输入您的选择 [字母切换标签, 数字执行操作, q退出]:${COLOR_RESET}"
 }
 
+
 # 显示选择列表
 show_select_list() {
     local prefix_title=$1
     shift
     local options=("$@")
+    if [ ${#options[@]} -eq 0 ]; then
+        log "WARN" "没有可用服务"
+        return 0
+    fi
+
     if [ -n "$prefix_title" ]; then
-        printf "${COLOR_YELLOW}%s${COLOR_RESET}\n" "$((i + 1)). ${prefix_title} ${options[$i]}"
+        for i in "${!options[@]}"; do
+            printf "${COLOR_BLUE}%s${COLOR_RESET}\n" "$((i + 1)). ${prefix_title} ${options[$i]}"
+        done
     else
-        printf "${COLOR_YELLOW}%s${COLOR_RESET}\n" "$((i + 1)). ${options[$i]}"
+        for i in "${!options[@]}"; do
+            printf "${COLOR_BLUE}%s${COLOR_RESET}\n" "$((i + 1)). ${options[$i]}"
+        done
     fi
 
     local selected

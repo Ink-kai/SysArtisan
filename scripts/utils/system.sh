@@ -1,6 +1,8 @@
 #!/bin/bash
 # 系统工具
 
+# shellcheck disable=SC2155
+
 # 补充lsb标准
 check_lsb() {
     if ! command -v lsb_release &>/dev/null; then
@@ -133,8 +135,7 @@ get_cpu_info() {
     local cpu_usage_rate=$(top -bn1 | grep "Cpu(s)" | awk '{print $2 + $4"%"}' | awk '{print $1}')
     local cpu_logical_cores=$(lscpu | grep "CPU(s):" | awk -F: '{print $2}' | awk '{print $1}')
     local cpu_physical_cores=$(lscpu | grep "Core(s) per socket:" | awk -F: '{print $2}' | awk '{print $1}')
-    #
-    printf "${COLOR_YELLOW}%-15s%-10s%-15s%-10s%-15s%-10s${COLOR_RESET}\n" "CPU核心数:" "$cpu_cores" "CPU使用率:" "$cpu_usage_rate" "逻辑CPU数:" "$cpu_logical_cores" "物理CPU数:" "$cpu_physical_cores"
+    printf "${COLOR_YELLOW}%-15s%-10s%-15s%-10s%-15s%-10s%-15s%-10s${COLOR_RESET}\n" "CPU核心数:" "$cpu_cores" "CPU使用率:" "$cpu_usage_rate" "逻辑CPU数:" "$cpu_logical_cores" "物理CPU数:" "$cpu_physical_cores"
 }
 
 # 获取内存信息

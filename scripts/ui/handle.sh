@@ -8,16 +8,19 @@ handle_service_operation() {
     log "DEBUG" "${operation}选择: $choice"
 
     if [ "$choice" = "0" ]; then
+        # 切换到主标签
+        TAB_STATE["current_tab"]="main"
+        sleep 1
         return 0
     fi
 
     # 根据操作类型获取服务列表
     local services_str
     if [ "$operation" = "install" ]; then
-        get_available_services
+        get_services "installable"
         services_str=${SERVICE_AVAILABLE[*]}
     else
-        get_installed_services
+        get_services "uninstallable"
         services_str=${SERVICE_INSTALLED[*]}
     fi
     # 将服务列表字符串转换为数组
@@ -45,28 +48,14 @@ handle_operation() {
     local choice=$1
     local current_tab=${TAB_STATE["current_tab"]}
 
-    # 处理返回主菜单
-    if [ "$choice" = "0" ]; then
-        TAB_STATE["last_tab"]=$current_tab
-        TAB_STATE["current_tab"]="main"
-        return 0
-    fi
-
-    # 根据当前标签处理操作
-    case "$current_tab" in
-    "install" | "uninstall")
-        show_service_options "$current_tab"
-        show_select_list "${current_tab^}" "${current_tab}_services[@]"
+    if [ "$current_tab" ]; then
         handle_service_operation "$current_tab" "$choice"
-        ;;
-    *)
-        # 调用对应的处理函数
-        "handle_${current_tab}" "$choice"
-        ;;
-    esac
-
-    printf "\n%s\n" "${COLOR_YELLOW}按任意键继续...${COLOR_RESET}"
-    read -n 1 -s -r
+    else
+        log "ERROR" "未选择标签"
+        sleep 1
+        TAB_STATE["current_tab"]="main"
+        handle_tab_content
+    fi
 }
 
 # 处理Tab切换
@@ -74,26 +63,48 @@ handle_tab_switch() {
     local key=${1:-""}
 
     log "DEBUG" "Tab切换: $key"
-
     case "$key" in
-    a | A) TAB_STATE["current_tab"]="install" ;;
-    b | B) TAB_STATE["current_tab"]="uninstall" ;;
-    c | C) TAB_STATE["current_tab"]="system" ;;
-    d | D) TAB_STATE["current_tab"]="config" ;;
-    e | E) TAB_STATE["current_tab"]="status" ;;
+    a | A)
+        TAB_STATE["current_tab"]="install"
+        handle_tab_content
+        ;;
+    b | B)
+        TAB_STATE["current_tab"]="uninstall"
+        handle_tab_content
+        ;;
+    c | C)
+        TAB_STATE["current_tab"]="system"
+        handle_tab_content
+        ;;
+    d | D)
+        TAB_STATE["current_tab"]="config"
+        handle_tab_content
+        ;;
+    e | E)
+        TAB_STATE["current_tab"]="status"
+        handle_tab_content
+        ;;
+    *)
+        log "DEBUG" "无效标签: $key"
+        sleep 1
+        TAB_STATE["current_tab"]="main"
+        handle_tab_content
+        ;;
     esac
+}
 
-    # 根据新的标签显示相应内容
+# 根据新的标签显示相应内容
+handle_tab_content() {
     case "${TAB_STATE["current_tab"]}" in
     "install")
-        show_service_options "install"
-        get_available_services
-        show_select_list "安装" "${SERVICE_AVAILABLE[@]}"
+        get_services "installable"
+        log "DEBUG" "安装服务列表: ${SERVICE_INSTALLED[*]}"
+        show_select_list "安装" "${SERVICE_INSTALLED[@]}"
         ;;
     "uninstall")
-        show_service_options "uninstall"
-        get_installed_services
-        show_select_list "卸载" "${SERVICE_INSTALLED[@]}"
+        get_services "uninstallable"
+        log "DEBUG" "卸载服务列表: ${SERVICE_AVAILABLE[*]}"
+        show_select_list "卸载" "${SERVICE_AVAILABLE[@]}"
         ;;
     "system")
         show_system_content
@@ -110,34 +121,29 @@ handle_tab_switch() {
 # 处理用户输入
 handle_user_input() {
     local choice
-
     # 显示操作提示
-    show_operation_prompt
+    read -n 1 -s -r -p "$(show_operation_prompt)" choice
+    echo -e "\n"
 
-    # 读取用户输入(单个字符)
-    read -r -n 1 choice
-    echo # 换行
-
-    # 检查是否为退出命令
-    if [[ "$choice" =~ [qQ] ]]; then
+    case "$choice" in
+    q | Q)
         log "INFO" "用户选择退出"
         cleanup_ui
         exit 0
-    fi
-
-    # 如果是主菜单状态，处理标签切换
-    if [ "${TAB_STATE["current_tab"]}" = "main" ]; then
-        handle_tab_switch "$choice"
-        return
-    fi
-
-    # 如果是数字，处理操作选择
-    if [[ "$choice" =~ ^[0-9]+$ ]]; then
+        ;;
+    [1-9] | [1-9][0-9])
+        # 执行操作后等待用户确认
         handle_operation "$choice"
-    # 如果是字母，处理标签切换
-    elif [[ "$choice" =~ ^[a-eA-E]$ ]]; then
+        ;;
+    [a-eA-E])
+        # 切换标签时只更新标签和内容区域
         handle_tab_switch "$choice"
-    else
+        ;;
+    *)
         log "WARN" "无效的输入: $choice"
-    fi
+        # 切换到主标签
+        TAB_STATE["current_tab"]="main"
+        sleep 1
+        ;;
+    esac
 }
